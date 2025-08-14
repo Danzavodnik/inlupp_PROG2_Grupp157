@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.*;
@@ -12,18 +13,18 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
+import javafx.util.Pair;
 
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class Gui extends Application {
 
@@ -36,7 +37,9 @@ public class Gui extends Application {
 
     private Button changeConnectionButton;
     private StackPane centerPane;
+    private Map<Circle, Label> circleLabelMap = new HashMap<>();
 
+    private List<Circle> selectedPlaces = new ArrayList<>();
     private Pane overlay;
     private boolean unsavedChanges = false;
     private Graph<String> graph = new ListGraph<>();
@@ -191,7 +194,7 @@ public class Gui extends Application {
 
                 if (lines.isEmpty()) return;
 
-                // 1. Läs bakgrundsbild
+
                 String imageUrl = lines.get(0);
                 Image backgroundImage = new Image(imageUrl);
                 ImageView backgroundView = new ImageView(backgroundImage);
@@ -202,13 +205,13 @@ public class Gui extends Application {
                 Pane overlay = new Pane();
                 overlay.setPickOnBounds(false);
 
-                // Rensa tidigare graf
+
                 centerPane.getChildren().clear();
                 graph = new ListGraph<>();
 
                 centerPane.getChildren().addAll(backgroundView, overlay);
 
-                // 2. Läs noder
+
                 if (lines.size() > 1) {
                     String[] nodeData = lines.get(1).split(";");
                     for (int i = 0; i < nodeData.length; i += 3) {
@@ -228,11 +231,11 @@ public class Gui extends Application {
 
                         overlay.getChildren().addAll(city, label);
 
-                        // Gör så att man kan klicka på noden för att skapa förbindelser om ni vill
+
                     }
                 }
 
-                // 3. Läs förbindelser
+
                 for (int i = 2; i < lines.size(); i++) {
                     String[] edgeData = lines.get(i).split(";");
                     String from = edgeData[0];
@@ -240,7 +243,7 @@ public class Gui extends Application {
                     String edgeName = edgeData[2];
                     int weight = Integer.parseInt(edgeData[3]);
 
-                    // Lägg till förbindelse i grafen
+
                     graph.connect(from, to, edgeName, weight);
                 }
 
@@ -302,7 +305,7 @@ public class Gui extends Application {
 
         showConnectionButton = new Button("Show Connection");
         showConnectionButton.setDisable(true);
-        showConnectionButton.setOnAction(e -> handleViewConnections());
+        showConnectionButton.setOnAction(e -> handleShowConnection());
 
         findPathButton = new Button("Find Path");
         findPathButton.setDisable(true);
@@ -315,16 +318,185 @@ public class Gui extends Application {
     }
 
     private void handleFindPath() {
+        if (selectedPlaces.size() != 2) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "You must select exactly two places");
+            alert.showAndWait();
+            return;
+        }
+
+        Circle fromCity = selectedPlaces.get(0);
+        Circle toCity = selectedPlaces.get(1);
+
+        String fromName = ((Label) getLabelForCircle(fromCity)).getText();
+        String toName = ((Label) getLabelForCircle(toCity)).getText();
+
+        List<Edge<String>> path = graph.getPath(fromName, toName);
+
+        if (path == null || path.isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "No path exists between these cities");
+            alert.showAndWait();
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Start: ").append(fromName).append("\n");
+            int totalTime = 0;
+
+            String current = fromName;
+            for (Edge<String> edge : path) {
+                sb.append(current).append(" -> ").append(edge.getDestination())
+                        .append(" (").append(edge.getWeight()).append(" min)\n");
+                totalTime += edge.getWeight();
+                current = edge.getDestination();
+            }
+            sb.append("Total time: ").append(totalTime).append(" min");
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, sb.toString());
+            alert.setHeaderText("Found Path");
+            alert.showAndWait();
+        }
+
+        selectedPlaces.clear();
     }
 
-    private void handleViewConnections() {
+
+    private void handleShowConnection() {
+        if (selectedPlaces.size() != 2) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "You must select exactly two places");
+            alert.showAndWait();
+            return;
+        }
+
+        Circle fromCity = selectedPlaces.get(0);
+        Circle toCity = selectedPlaces.get(1);
+
+        String fromName = ((Label) getLabelForCircle(fromCity)).getText();
+        String toName = ((Label) getLabelForCircle(toCity)).getText();
+
+
+        if (!graph.pathExists(fromName, toName)) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "No connection exists between these places");
+            alert.showAndWait();
+            return;
+        }
+
+
+        Edge<String> connection = graph.getEdgeBetween(fromName, toName);
+        if (connection == null) {
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Connection could not be found");
+            alert.showAndWait();
+            return;
+        }
+
+        String weightStr = String.valueOf(connection.getWeight());
+
+        showConnectionDialog(
+                fromName,
+                toName,
+                connection.getName(),
+                weightStr,
+                false,
+                false
+        );
     }
+
 
     private void handleEditConnection() {
+        if (selectedPlaces.size() != 2) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "You must select exactly two places");
+            alert.showAndWait();
+            return;
+        }
+
+        Circle fromCity = selectedPlaces.get(0);
+        Circle toCity = selectedPlaces.get(1);
+
+        String fromName = ((Label) getLabelForCircle(fromCity)).getText();
+        String toName = ((Label) getLabelForCircle(toCity)).getText();
+
+        Edge<String> edge = graph.getEdgeBetween(fromName, toName);
+        if (edge == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "No connection exists between the selected cities");
+            alert.showAndWait();
+            return;
+        }
+
+
+        String weightStr = String.valueOf(edge.getWeight());
+
+
+        Optional<Pair<String, Integer>> result = showConnectionDialog(fromName, toName, edge.getName(), weightStr, false, true);
+
+        if (result.isPresent()) {
+            Pair<String, Integer> pair = result.get();
+            String newName = pair.getKey();
+            int newWeight = pair.getValue();
+
+            if (newWeight < 0) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Time must be a non-negative number");
+                alert.showAndWait();
+                return;
+            }
+
+
+            graph.setConnectionWeight(fromName, toName, newWeight);
+
+
+        }
+
+        selectedPlaces.clear();
     }
 
+
     private void handleAddConnection() {
+        if (selectedPlaces.size() != 2) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "You must select exactly two places");
+            alert.showAndWait();
+            return;
+        }
+
+        Circle fromCity = selectedPlaces.get(0);
+        Circle toCity = selectedPlaces.get(1);
+
+        String fromName = ((Label) getLabelForCircle(fromCity)).getText();
+        String toName = ((Label) getLabelForCircle(toCity)).getText();
+
+        Optional<Pair<String, Integer>> result = showConnectionDialog(fromName, toName, "", null, true, true);
+        if (result.isPresent()) {
+            String connName = result.get().getKey();
+            int connTime = result.get().getValue();
+
+            if (connName.trim().isEmpty() || connTime < 0) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid input. Name cannot be empty and time must be a non-negative number");
+                alert.showAndWait();
+                return;
+            }
+
+            // Kolla om det redan finns en connection med samma namn mellan dessa två noder
+            boolean duplicate = graph.getEdgeBetween(fromName, toName).stream()
+                    .anyMatch(edge -> edge.getName().equals(connName));
+
+            if (duplicate) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Connection with this name already exists!");
+                alert.showAndWait();
+                return;
+            }
+
+            // Lägg till connection i grafen
+            graph.connect(fromName, toName, connName, connTime);
+
+            // Rita linjen på overlay
+            Line connectionLine = new Line(
+                    fromCity.getLayoutX(), fromCity.getLayoutY(),
+                    toCity.getLayoutX(), toCity.getLayoutY()
+            );
+            overlay.getChildren().add(connectionLine);
+
+            fromCity.setFill(Color.BLUE);
+            toCity.setFill(Color.BLUE);
+
+            selectedPlaces.clear();
+        }
     }
+
 
     private void handleAddPlace(Button newPlaceButton, Pane overlay) {
 
@@ -344,7 +516,8 @@ public class Gui extends Application {
                 if (!graph.getNodes().contains(name)) {
                     graph.add(name);
 
-                    Circle city = new Circle(8, Color.RED);
+                    Circle city = new Circle(8, Color.BLUE);
+                    makePlaceSelectable(city);
                     city.setLayoutX(x);
                     city.setLayoutY(y);
 
@@ -353,6 +526,7 @@ public class Gui extends Application {
                     label.setLayoutY(y - 5);
 
                     overlay.getChildren().addAll(city, label);
+                    circleLabelMap.put(city, label);
                 } else {
                     Alert alert = new Alert(Alert.AlertType.WARNING, "This city already exists!");
                     alert.showAndWait();
@@ -366,11 +540,73 @@ public class Gui extends Application {
         });
     }
 
-    private void handleAddPlaceAt() {
+
+    //Buttons
+
+    private Optional<Pair<String, Integer>> showConnectionDialog(String from, String to,
+                                                                 String name, String weight,
+                                                                 boolean canEditName, boolean canEditTime) {
+        Dialog<Pair<String, Integer>> dialog = new Dialog<>();
+        dialog.setTitle("Connection");
+        dialog.setHeaderText("Connection between " + from + " and " + to);
+
+        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField nameField = new TextField();
+        nameField.setText(name != null ? name : "");
+        nameField.setEditable(canEditName);
+
+        TextField timeField = new TextField();
+        timeField.setText(weight != null ? String.valueOf(weight) : "");
+        timeField.setEditable(canEditTime);
+
+        grid.add(new Label("Name:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Time:"), 0, 1);
+        grid.add(timeField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == okButtonType) {
+                try {
+                    int time = Integer.parseInt(timeField.getText().trim());
+                    return new Pair<>(nameField.getText().trim(), time);
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+            return null;
+        });
+
+        return dialog.showAndWait();
+    }
+
+    private Node getLabelForCircle(Circle city) {
+        return circleLabelMap.get(city);
+    }
+
+    private void makePlaceSelectable(Circle city) {
+        city.setOnMouseClicked(e -> {
+            if (selectedPlaces.contains(city)) {
+                city.setFill(Color.BLUE);
+                selectedPlaces.remove(city);
+            } else {
+                if (selectedPlaces.size() < 2) {
+                    city.setFill(Color.RED);
+                    selectedPlaces.add(city);
+                }
+            }
+        });
 
     }
 
-    //Buttons
     private void enableAllButtons(Button... buttons) {
         for (Button btn : buttons) {
             btn.setDisable(false);
@@ -396,6 +632,6 @@ public class Gui extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args); // 👈 detta startar JavaFX-applikationen korrekt
+        launch(args);
     }
 }
