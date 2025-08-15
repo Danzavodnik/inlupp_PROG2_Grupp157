@@ -1,0 +1,36 @@
+# Maven build output
+target/
+**/target/
+
+# IntelliJ / VS Code / Eclipse metadata
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# Java class files
+*.class
+
+# JAR, WAR, EAR
+*.jar
+*.war
+*.ear
+
+# Maven status and reports
+**/maven-status/
+**/surefire-reports/
+**/failsafe-reports/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*.lst

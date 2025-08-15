@@ -1,30 +1,53 @@
 package se.su.inlupp;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.imageio.ImageIO;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.geometry.Insets;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.geometry.Insets;
-import javafx.scene.image.Image;
 import javafx.util.Pair;
-
-import javax.imageio.ImageIO;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.*;
 
 public class Gui extends Application {
 
@@ -422,7 +445,6 @@ public class Gui extends Application {
 
         String weightStr = String.valueOf(edge.getWeight());
 
-
         Optional<Pair<String, Integer>> result = showConnectionDialog(fromName, toName, edge.getName(), weightStr, false, true);
 
         if (result.isPresent()) {
@@ -470,12 +492,8 @@ public class Gui extends Application {
                 return;
             }
 
-            // Kolla om det redan finns en connection med samma namn mellan dessa två noder
-            boolean duplicate = graph.getEdgeBetween(fromName, toName).stream()
-                    .anyMatch(edge -> edge.getName().equals(connName));
-
-            if (duplicate) {
-                Alert alert = new Alert(Alert.AlertType.WARNING, "Connection with this name already exists!");
+            if (graph.pathExists(fromName, toName)) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "This connection already exists!");
                 alert.showAndWait();
                 return;
             }
