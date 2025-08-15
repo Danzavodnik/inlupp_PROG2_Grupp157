@@ -1,3 +1,8 @@
+// PROG2 VT2025, Inlämningsuppgift, del 2
+// Grupp 157
+// Viktor Hedman vihe4638
+// Dan Zavodnik daza3914
+// Axel Anderson axan8987
 package se.su.inlupp;
 
 import java.io.File;
@@ -150,11 +155,11 @@ public class Gui extends Application {
         File file = fileChooser.showSaveDialog(centerPane.getScene().getWindow());
         if (file != null) {
             try (PrintWriter writer = new PrintWriter(file)) {
-                // URL
+                //URL
                 ImageView backgroundView = (ImageView) centerPane.getChildren().get(0);
                 writer.println(backgroundView.getImage().getUrl());
 
-                // 2. Skriv alla noder i en lång rad
+                //skriver alla noder i en lång rad
                 StringBuilder nodeLine = new StringBuilder();
                 Pane overlay = (Pane) centerPane.getChildren().get(1);
                 for (javafx.scene.Node node : overlay.getChildren()) {
@@ -179,7 +184,7 @@ public class Gui extends Application {
                 if (nodeLine.length() > 0) nodeLine.setLength(nodeLine.length() - 1);
                 writer.println(nodeLine.toString());
 
-                // Write connections
+                //skriver connections
                 Set<String> writtenEdges = new HashSet<>();
                 for (String fromNode : graph.getNodes()) {
                     for (Edge<String> edge : graph.getEdgesFrom(fromNode)) {
@@ -221,9 +226,16 @@ public class Gui extends Application {
                 String imageUrl = lines.get(0);
                 Image backgroundImage = new Image(imageUrl);
                 ImageView backgroundView = new ImageView(backgroundImage);
-                backgroundView.setFitWidth(centerPane.getWidth());
-                backgroundView.setFitHeight(centerPane.getHeight());
+                
+                // Ta bort skalning?
+                // backgroundView.setFitWidth(centerPane.getWidth());
+                // backgroundView.setFitHeight(centerPane.getHeight());
+                // backgroundView.setPreserveRatio(true);
+
+                // Centrera bilden i centerPane
                 backgroundView.setPreserveRatio(true);
+                backgroundView.setSmooth(true);
+                centerPane.setAlignment(backgroundView, javafx.geometry.Pos.CENTER);
 
                 Pane overlay = new Pane();
                 overlay.setPickOnBounds(false);
@@ -291,7 +303,7 @@ public class Gui extends Application {
             centerPane.getChildren().clear();
 
             ImageView backgroundView = new ImageView(backgroundImage);
-
+            
             backgroundView.setFitWidth(centerPane.getWidth());
             backgroundView.setFitHeight(centerPane.getHeight());
             backgroundView.setPreserveRatio(true);
@@ -457,11 +469,7 @@ public class Gui extends Application {
                 alert.showAndWait();
                 return;
             }
-
-
             graph.setConnectionWeight(fromName, toName, newWeight);
-
-
         }
 
         selectedPlaces.clear();
@@ -492,16 +500,16 @@ public class Gui extends Application {
                 return;
             }
 
-            if (graph.pathExists(fromName, toName)) {
+            if (graph.getEdgeBetween(fromName, toName) != null) {
                 Alert alert = new Alert(Alert.AlertType.WARNING, "This connection already exists!");
                 alert.showAndWait();
                 return;
             }
 
-            // Lägg till connection i grafen
+            //lägger till connection i grafen
             graph.connect(fromName, toName, connName, connTime);
 
-            // Rita linjen på overlay
+            //ritar linje mellan cirklarna
             Line connectionLine = new Line(
                     fromCity.getLayoutX(), fromCity.getLayoutY(),
                     toCity.getLayoutX(), toCity.getLayoutY()

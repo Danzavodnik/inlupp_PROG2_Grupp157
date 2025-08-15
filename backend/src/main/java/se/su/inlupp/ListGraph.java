@@ -108,16 +108,16 @@ public class ListGraph<T> implements Graph<T> {
   }
 
   @Override
-public String toString() {
-   StringBuilder sb = new StringBuilder();
-    for (T node : adjacencyList.keySet()) {
-        sb.append(node.toString()).append(":\n");
-        for (Edge<T> edge : adjacencyList.get(node)) {
-            sb.append("  ").append(edge.toString()).append("\n");
-        }
-    }
-    return sb.toString();
-}
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+      for (T node : adjacencyList.keySet()) {
+          sb.append(node.toString()).append(":\n");
+          for (Edge<T> edge : adjacencyList.get(node)) {
+              sb.append("  ").append(edge.toString()).append("\n");
+          }
+      }
+      return sb.toString();
+  }
 
   @Override
   public boolean pathExists(T from, T to) {
